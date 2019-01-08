@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="user-scalable=no">
+<script type="text/javascript" src="jquery.min.js"></script>
+<title></title>
+</head>
+<body>	
+	<div style="margin:0px auto;width:100%;">
+		<div>
+			<h1>数字识别，请手写数字 0~9</h1>
+		</div>
+		<div>	
+			<canvas id = "myCanvas" ></canvas>   
+		</div>
+		<div id="div_btn" style="align:center;">
+			<!-- <button id="btn_ok" onClick="javascript:getImageData();" ><font size=20>ok</font></button> -->
+			<!-- <button id="btn_clear" onClick="javascript:restart();" ><font size=20>清空</font></button> -->
+		</div> 
+		<div style="font-size:140px;">
+			<span id='result' ></span>	
+		</div>
+	</div>	
+</body>
+
+
+<script type="text/javascript">
+var ww_min = 28*20;
+var ww = ww_min; //document.body.clientWidth;
+if(ww > ww_min) {
+	ww = ww_min;
+}
+
+//画布等变量的初始化
+var myCanvas = document.getElementById("myCanvas");
+var context = myCanvas.getContext("2d");
+var l = myCanvas.offsetLeft;
+var t = myCanvas.offsetTop;
+
+var g_bStartDraw = false;
+var x0 = 0;
+var y0 = 0;
+var line_w = 20;
+var g_bSubmit = false;
+
+ 
+//鼠标移动、触摸移动等事件响应事件注册 
+$(function(){ 	
+	myCanvas.width=ww;
+	myCanvas.height=ww;
+
+	myCanvas.addEventListener('mousemove',function(ev){
+		onMousemoveCanvas(ev);
+	}, false);
+	
+	myCanvas.addEventListener('mousedown',function(ev){
+		onMousedownCanvas(ev);
+	}, false);
+	
+	myCanvas.addEventListener('mouseup',function(ev){
+		onMouseupCanvas(ev);
+	}, false);
+	
+	myCanvas.addEventListener('touchstart',function(ev){
+		onTouchstartCanvas(ev);
+	}, false);
+	
+	myCanvas.addEventListener('touchmove',function(ev){
+		onTouchmoveCanvas(ev);
+	}, false);
+	
+	myCanvas.addEventListener('touchend',function(ev){
+		onTouchendCanvas(ev);
+	}, false);
+	
+	//
+	restart();
+	
+});  
+
+//初始化画布
+function restart() {	
+	//for clear canvas
+	myCanvas.width = myCanvas.width;
+	
+	context.save();	
+	
+	//context.clearRect(0, 0, ww, ww);
+	context.fillStyle = "#000000"
+	context.fillRect(0, 0, ww, ww);	
+
+	context.restore();	
+	
+	//$('#result').html('');
+}
+
+//清空画布
+function clearDraw() {		
+	//for clear canvas
+	myCanvas.width = myCanvas.width;	
+	context.save();	
+	
+	//context.clearRect(0, 0, ww, ww);
+	context.fillStyle = "#000000"
+	context.fillRect(0, 0, ww, ww);	
+
+	context.restore();	
+}
+
+//开始手写
+function startDraw(x,y) {
+	g_bStartDraw = true;	
+	x0 = x;
+	y0 = y;
+}
+
+//处理手写笔迹
+function drawNum(x,y) {
+	if(!g_bStartDraw) {
+		return;
+	}
+	
+	//
+	context.save();
+	context.lineWidth = line_w;   
+	context.lineCap = 'round';
+	context.strokeStyle = "rgba(255,0,0,1)";
+	
+	context.moveTo(x0,y0);
+	context.lineTo(x,y);
+	context.stroke();	
+
+	context.restore();		
+	
+	//
+	x0 = x;
+	y0 = y;
+}
+
+//结束手写300毫秒后，发送给后台，请求识别结果
+function endDraw() {
+	g_bStartDraw = false;	
+	setTimeout("saveFileToFile()",300);
+}
+
+//各类鼠标的响应
+function onMousedownCanvas(ev) {
+	var x, y;
+	if (ev.layerX || ev.layerX == 0) {
+		x = ev.layerX;
+		y = ev.layerY;
+	} else if (ev.offsetX || ev.offsetX == 0) { // Opera
+		x = ev.offsetX;
+		y = ev.offsetY;
+	}
+	
+	var pos = getPointOnCanvas(myCanvas,ev.pageX,ev.pageY);
+	startDraw(pos.x,pos.y);
+}
+
+//各类鼠标的响应
+function onMouseupCanvas(ev) {
+	var x, y;
+	if (ev.layerX || ev.layerX == 0) {
+		x = ev.layerX;
+		y = ev.layerY;
+	} else if (ev.offsetX || ev.offsetX == 0) { // Opera
+		x = ev.offsetX;
+		y = ev.offsetY;
+	}
+	
+	endDraw();
+}
+
+//各类鼠标的响应
+function onMousemoveCanvas(ev) {	
+	var x, y;
+	if (ev.layerX || ev.layerX == 0) {
+		x = ev.layerX;
+		y = ev.layerY;
+	} else if (ev.offsetX || ev.offsetX == 0) { // Opera
+		x = ev.offsetX;
+		y = ev.offsetY;
+	}
+	
+	var pos = getPointOnCanvas(myCanvas,ev.pageX,ev.pageY);
+	drawNum(pos.x,pos.y);	
+}
+
+//各类触屏的响应
+function onTouchstartCanvas(ev) {
+	ev.preventDefault();
+	var touch = ev.touches[0];
+    var x = touch.clientX - l;
+    var y = touch.clientY - t;
+	startDraw(x,y);
+}
+
+//各类触屏的响应
+function onTouchmoveCanvas(ev) {
+	ev.preventDefault();
+	var touch = ev.touches[0];
+    var x = touch.clientX - l;
+    var y = touch.clientY - t;
+	drawNum(x,y);
+}
+
+//各类触屏的响应
+function onTouchendCanvas(ev) {
+	ev.preventDefault();
+	endDraw();
+}
+
+//画布上的坐标转换
+function getPointOnCanvas(canvas, x, y) {
+	var bbox =canvas.getBoundingClientRect();
+	return { x: x- bbox.left *(canvas.width / bbox.width),
+	y:y - bbox.top * (canvas.height / bbox.height)
+	};
+}
+
+//结束手写后，将手写图片发送给后台，请求识别结果
+function saveFileToFile() {
+	if(g_bStartDraw) {
+		return;
+	}
+
+	//获取画布上的图片
+	var image = myCanvas.toDataURL("image/png");
+	
+	//发送给后台进行识别
+	$.post("num.do?method=predictImage",
+		{image:image
+		},
+		function(result){
+			//显示识别结果
+			$('#result').html(result);
+			
+			//1秒后，清空画布
+			setTimeout("clearDraw()",1000);
+		}
+	);
+}
+</script>
+
+</html>
